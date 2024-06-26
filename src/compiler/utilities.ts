@@ -6955,6 +6955,10 @@ export function modifiersToFlags(modifiers: readonly ModifierLike[] | undefined)
     return flags;
 }
 
+export function isTypeFunctionDeclaration(node: Node): node is FunctionDeclaration {
+    return isFunctionDeclaration(node) && hasSyntacticModifier(node, ModifierFlags.Type);
+}
+
 /** @internal */
 export function modifierToFlag(token: SyntaxKind): ModifierFlags {
     switch (token) {
@@ -6974,6 +6978,7 @@ export function modifierToFlag(token: SyntaxKind): ModifierFlags {
         case SyntaxKind.InKeyword: return ModifierFlags.In;
         case SyntaxKind.OutKeyword: return ModifierFlags.Out;
         case SyntaxKind.Decorator: return ModifierFlags.Decorator;
+        case SyntaxKind.TypeKeyword: return ModifierFlags.Type;
     }
     return ModifierFlags.None;
 }

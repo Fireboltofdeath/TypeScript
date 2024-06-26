@@ -1495,7 +1495,7 @@ export function transformTypeScript(context: TransformationContext) {
     }
 
     function visitFunctionDeclaration(node: FunctionDeclaration): VisitResult<Statement> {
-        if (!shouldEmitFunctionLikeDeclaration(node)) {
+        if (!shouldEmitFunctionLikeDeclaration(node) || hasSyntacticModifier(node, ModifierFlags.Type)) {
             return factory.createNotEmittedStatement(node);
         }
         const updated = factory.updateFunctionDeclaration(

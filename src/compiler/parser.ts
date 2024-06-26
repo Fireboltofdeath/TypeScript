@@ -2741,6 +2741,8 @@ namespace Parser {
             case SyntaxKind.SetKeyword:
                 nextToken();
                 return canFollowModifier();
+            case SyntaxKind.TypeKeyword:
+                return nextToken() === SyntaxKind.FunctionKeyword;
             default:
                 return nextTokenIsOnSameLineAndCanFollowModifier();
         }
@@ -7093,8 +7095,9 @@ namespace Parser {
                 //
                 // could be legal, it would add complexity for very little gain.
                 case SyntaxKind.InterfaceKeyword:
-                case SyntaxKind.TypeKeyword:
                     return nextTokenIsIdentifierOnSameLine();
+                case SyntaxKind.TypeKeyword:
+                    return lookAhead(nextTokenIsIdentifierOnSameLine) || nextToken() === SyntaxKind.FunctionKeyword;
                 case SyntaxKind.ModuleKeyword:
                 case SyntaxKind.NamespaceKeyword:
                     return nextTokenIsIdentifierOrStringLiteralOnSameLine();

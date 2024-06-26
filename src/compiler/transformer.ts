@@ -19,7 +19,9 @@ import {
     EmitResolver,
     EmitTransformers,
     emptyArray,
+    type Expression,
     factory,
+    findLast,
     FunctionDeclaration,
     getEmitFlags,
     getEmitModuleKind,
@@ -30,6 +32,7 @@ import {
     getUseDefineForClassFields,
     Identifier,
     isBundle,
+    isExpressionStatement,
     isSourceFile,
     LexicalEnvironmentFlags,
     map,
@@ -72,8 +75,7 @@ import {
     transformNodeModule,
     transformSystemModule,
     transformTypeScript,
-    VariableDeclaration
-} from "./_namespaces/ts";
+    VariableDeclaration} from "./_namespaces/ts";
 import * as performance from "./_namespaces/ts.performance";
 
 function getModuleTransformer(moduleKind: ModuleKind): TransformerFactory<SourceFile | Bundle> {
@@ -657,6 +659,30 @@ export function transformNodes<T extends Node>(resolver: EmitResolver | undefine
     }
 }
 
+export function transformTypeFunction(node: FunctionDeclaration, sourceFile: SourceFile, emitResolver: EmitResolver): Expression {
+    const functionExpression = factory.updateSourceFile(sourceFile, [factory.createExpressionStatement(factory.createFunctionExpression(
+        /*modifiers*/ undefined,
+        /*asteriskToken*/ undefined,
+        node.name,
+        /*typeParameters*/ undefined,
+        node.parameters,
+        /*type*/ undefined,
+        node.body!
+    ))]);
+
+    const result = transformNodes(
+        emitResolver,
+        /*host*/ undefined,
+        factory,
+        typeFunctionCompilerOptions,
+        [functionExpression],
+        getTransformers(typeFunctionCompilerOptions).scriptTransformers,
+        /*allowDtsFiles*/ false,
+    );
+
+    return Debug.checkDefined(findLast((result.transformed[0] as SourceFile).statements, isExpressionStatement), "transform failed").expression;
+}
+
 /** @internal */
 export const nullTransformationContext: TransformationContext = {
     factory: factory, // eslint-disable-line object-shorthand
@@ -685,4 +711,9 @@ export const nullTransformationContext: TransformationContext = {
     onSubstituteNode: noEmitSubstitution,
     onEmitNode: noEmitNotification,
     addDiagnostic: noop,
+};
+
+const typeFunctionCompilerOptions: CompilerOptions = {
+    module: ModuleKind.CommonJS,
+    target: ScriptTarget.ES2020,
 };

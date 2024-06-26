@@ -3600,12 +3600,14 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         }
 
         checkStrictModeFunctionName(node);
+        const flags = hasSyntacticModifier(node, ModifierFlags.Type) ? SymbolFlags.TypeFunction : SymbolFlags.Function;
+        const excludes = hasSyntacticModifier(node, ModifierFlags.Type) ? SymbolFlags.TypeAliasExcludes : SymbolFlags.FunctionExcludes;
         if (inStrictMode) {
             checkStrictModeFunctionDeclaration(node);
-            bindBlockScopedDeclaration(node, SymbolFlags.Function, SymbolFlags.FunctionExcludes);
+            bindBlockScopedDeclaration(node, flags, excludes);
         }
         else {
-            declareSymbolAndAddToSymbolTable(node, SymbolFlags.Function, SymbolFlags.FunctionExcludes);
+            declareSymbolAndAddToSymbolTable(node, flags, excludes);
         }
     }
 

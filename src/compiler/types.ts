@@ -877,6 +877,7 @@ export const enum ModifierFlags {
     In =                 1 << 15, // Contravariance modifier
     Out =                1 << 16, // Covariance modifier
     Decorator =          1 << 17, // Contains a decorator.
+    Type =               1 << 18,
     HasComputedFlags =   1 << 29, // Modifier flags have been computed
 
     AccessibilityModifier = Public | Private | Protected,
@@ -5749,14 +5750,15 @@ export const enum SymbolFlags {
     Transient               = 1 << 25,  // Transient symbol (created during type check)
     Assignment              = 1 << 26,  // Assignment treated as declaration (eg `this.prop = 1`)
     ModuleExports           = 1 << 27,  // Symbol for CommonJS `module` of `module.exports`
+    TypeFunction            = 1 << 28,  // Type function
     /** @internal */
     All = FunctionScopedVariable | BlockScopedVariable | Property | EnumMember | Function | Class | Interface | ConstEnum | RegularEnum | ValueModule | NamespaceModule | TypeLiteral
-        | ObjectLiteral | Method | Constructor | GetAccessor | SetAccessor | Signature | TypeParameter | TypeAlias | ExportValue | Alias | Prototype | ExportStar | Optional | Transient,
+        | ObjectLiteral | Method | Constructor | GetAccessor | SetAccessor | Signature | TypeParameter | TypeAlias | TypeFunction | ExportValue | Alias | Prototype | ExportStar | Optional | Transient,
 
     Enum = RegularEnum | ConstEnum,
     Variable = FunctionScopedVariable | BlockScopedVariable,
     Value = Variable | Property | EnumMember | ObjectLiteral | Function | Class | Enum | ValueModule | Method | GetAccessor | SetAccessor,
-    Type = Class | Interface | Enum | EnumMember | TypeLiteral | TypeParameter | TypeAlias,
+    Type = Class | Interface | Enum | EnumMember | TypeLiteral | TypeParameter | TypeAlias | TypeFunction,
     Namespace = ValueModule | NamespaceModule | Enum,
     Module = ValueModule | NamespaceModule,
     Accessor = GetAccessor | SetAccessor,
@@ -6064,6 +6066,7 @@ export interface NodeLinks {
     parameterInitializerContainsUndefined?: boolean; // True if this is a parameter declaration whose type annotation contains "undefined".
     fakeScopeForSignatureDeclaration?: boolean; // True if this is a fake scope injected into an enclosing declaration chain.
     assertionExpressionType?: Type;     // Cached type of the expression of a type assertion
+    evaluatedTypeFunction?: (...args: any[]) => any;
 }
 
 /** @internal */
@@ -6103,6 +6106,7 @@ export const enum TypeFlags {
     NonPrimitive    = 1 << 26,  // intrinsic object type
     TemplateLiteral = 1 << 27,  // Template literal type
     StringMapping   = 1 << 28,  // Uppercase/Lowercase type
+    TypeFunction    = 1 << 29,  // Type functions
 
     /** @internal */
     AnyOrUnknown = Any | Unknown,
@@ -6135,7 +6139,7 @@ export const enum TypeFlags {
     UnionOrIntersection = Union | Intersection,
     StructuredType = Object | Union | Intersection,
     TypeVariable = TypeParameter | IndexedAccess,
-    InstantiableNonPrimitive = TypeVariable | Conditional | Substitution,
+    InstantiableNonPrimitive = TypeVariable | Conditional | Substitution | TypeFunction,
     InstantiablePrimitive = Index | TemplateLiteral | StringMapping,
     Instantiable = InstantiableNonPrimitive | InstantiablePrimitive,
     StructuredOrInstantiable = StructuredType | Instantiable,
@@ -6188,6 +6192,18 @@ export interface Type {
     immediateBaseConstraint?: Type;  // Immediate base constraint cache
     /** @internal */
     widened?: Type; // Cached widened form of the type
+}
+
+export interface TypeFunctionType extends InstantiableType {
+    symbol: Symbol;
+    declaration: FunctionDeclaration;
+}
+
+export interface DeferredTypeFunctionType extends TypeFunctionType {
+    /** @internal */
+    mapper?: TypeMapper;
+    /** @internal */
+    instantiations?: Map<string, Type>; // Instantiations of generic type alias (undefined if non-generic)
 }
 
 /** @internal */
@@ -10006,4 +10022,52 @@ export interface Queue<T> {
     enqueue(...items: T[]): void;
     dequeue(): T;
     isEmpty(): boolean;
+}
+
+export namespace TypeFunctionTypes {
+    export type TypeFunctionType =
+        | TypeFunctionUnionType
+        | TypeFunctionIntersectionType
+        | TypeFunctionLiteralType
+        | TypeFunctionPrimitiveType
+        | TypeFunctionTupleType
+        | TypeFunctionObjectType
+        | TypeFunctionArrayType;
+
+    export interface TypeFunctionUnionType {
+        kind: "union";
+        types: TypeFunctionType[];
+    }
+
+    export interface TypeFunctionIntersectionType {
+        kind: "intersection";
+        types: TypeFunctionType[];
+    }
+
+    export interface TypeFunctionLiteralType {
+        kind: "literal",
+        value: string | number | boolean;
+    }
+
+    export interface TypeFunctionPrimitiveType {
+        kind: "primitive",
+        primitive: "string" | "number" | "boolean" | "undefined" | "null" | "any" | "object",
+    }
+
+    export interface TypeFunctionTupleType {
+        kind: "tuple",
+        readonly: boolean;
+        elements: TypeFunctionType[]
+    }
+
+    export interface TypeFunctionObjectType {
+        kind: "object",
+        fields: { name: string, type: TypeFunctionType, readonly: boolean }[]
+    }
+
+    export interface TypeFunctionArrayType {
+        kind: "array",
+        readonly: boolean;
+        elementType: TypeFunctionType;
+    }
 }
